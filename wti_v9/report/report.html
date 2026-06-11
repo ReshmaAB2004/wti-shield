@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>WTI Shield — Threat Intelligence Report</title>
+<style>
+/* ═══════════════════════════════════════════════
+   RESET & VARIABLES
+═══════════════════════════════════════════════ */
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#060d1a;--bg2:#0d1526;--bg3:#111f38;--bg4:#1a2940;
+  --border:#1e3354;--text:#e2e8f0;--muted:#6b8099;--dim:#2d4060;
+  --accent:#00c8ff;--accent2:#0ea5e9;
+  --green:#22c55e;--red:#ef4444;--orange:#f97316;
+  --purple:#a855f7;--blue:#3b82f6;--gold:#f59e0b;--teal:#14b8a6;
+  --yellow:#f59e0b;--yellow-bg:#1c1200;--yellow-border:#78350f;
+}
+html{scroll-behavior:smooth}
+body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;overflow-x:hidden}
+
+/* ═══════════════════════════════════════════════
+   ANIMATIONS
+═══════════════════════════════════════════════ */
+@keyframes fadeUp{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:translateY(0)}}
+@keyframes slideIn{from{opacity:0;transform:translateX(-14px)}to{opacity:1;transform:translateX(0)}}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+@keyframes popIn{0%{opacity:0;transform:scale(.65)}70%{transform:scale(1.05)}100%{opacity:1;transform:scale(1)}}
+@keyframes typingDot{0%,80%,100%{transform:scale(.5);opacity:.3}40%{transform:scale(1);opacity:1}}
+@keyframes gaugeFill{from{stroke-dashoffset:339.3}to{stroke-dashoffset:var(--offset,339.3)}}
+@keyframes barGrow{from{width:0}to{width:var(--w,0%)}}
+
+/* ═══════════════════════════════════════════════
+   LOADER
+═══════════════════════════════════════════════ */
+#loader{
+  position:fixed;inset:0;background:var(--bg);z-index:9999;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px;
+  transition:opacity .5s;
+}
+#loader.hide{opacity:0;pointer-events:none}
+.lo-icon{font-size:58px;animation:bounce .9s ease infinite}
+.lo-title{font-size:20px;font-weight:800;
+  background:linear-gradient(135deg,var(--accent),var(--purple));
+  -webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.lo-bar{width:280px;height:3px;background:var(--bg4);border-radius:2px;overflow:hidden}
+.lo-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple),var(--accent));
+  background-size:200%;animation:shimmer 1s linear infinite;border-radius:2px;width:0%;transition:width .3s}
+.lo-step{font-size:11px;color:var(--muted);min-height:16px;transition:all .3s}
+
+/* ═══════════════════════════════════════════════
+   TOP BANNER
+═══════════════════════════════════════════════ */
+#banner{
+  position:sticky;top:0;z-index:100;
+  padding:11px 20px;font-size:13px;font-weight:700;color:#fff;
+  display:flex;align-items:center;justify-content:center;gap:10px;
+  overflow:hidden;box-shadow:0 4px 20px rgba(0,0,0,.6);
+}
+#banner .sl{position:absolute;top:0;left:-100%;width:40%;height:100%;
+  background:rgba(255,255,255,.07);transform:skewX(-20deg);transition:left .8s}
+#banner:hover .sl{left:160%}
+.b-safe{background:linear-gradient(135deg,#064e3b,#065f46)}
+.b-sql {background:linear-gradient(135deg,#7f1d1d,#b91c1c)}
+.b-xss {background:linear-gradient(135deg,#7c2d12,#c2410c)}
+.b-ph  {background:linear-gradient(135deg,#4a1d96,#7c3aed)}
+.b-ddos{background:linear-gradient(135deg,#1e3a5f,#2563eb)}
+.b-local{background:linear-gradient(135deg,#78350f,#b45309)}
+
+/* ═══════════════════════════════════════════════
+   PAGE LAYOUT
+═══════════════════════════════════════════════ */
+.layout{display:flex;min-height:calc(100vh - 45px)}
+
+/* LEFT — Section navigation */
+#sideNav{
+  width:230px;flex-shrink:0;background:var(--bg2);
+  border-right:1px solid var(--border);
+  position:sticky;top:45px;height:calc(100vh - 45px);
+  overflow-y:auto;display:flex;flex-direction:column;
+}
+#sideNav::-webkit-scrollbar{width:4px}
+#sideNav::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.nav-header{padding:12px 14px 8px;border-bottom:1px solid var(--border)}
+.nav-title{font-size:11px;font-weight:800;color:var(--accent);letter-spacing:1px;text-transform:uppercase}
+.nav-prog{height:3px;background:var(--bg4);border-radius:2px;margin-top:8px;overflow:hidden}
+.nav-prog-fill{height:100%;background:linear-gradient(90deg,var(--accent),var(--purple));
+  border-radius:2px;transition:width .5s}
+.nav-pct{font-size:9px;color:var(--muted);margin-top:4px}
+.nav-item{
+  display:flex;align-items:center;gap:9px;padding:9px 14px;
+  cursor:pointer;font-size:11px;color:var(--muted);
+  border-left:3px solid transparent;transition:all .2s;
+  border-bottom:1px solid var(--bg4);
+}
+.nav-item:hover{background:var(--bg3);color:var(--text);border-left-color:var(--border)}
+.nav-item.active{background:var(--bg3);color:var(--accent);border-left-color:var(--accent);font-weight:700}
+.nav-item .ni{font-size:14px;flex-shrink:0}
+.nav-item .nck{margin-left:auto;color:var(--green);font-size:11px;opacity:0;transition:opacity .3s}
+.nav-item.done .nck{opacity:1}
+.nav-section-lbl{padding:8px 14px 4px;font-size:9px;color:var(--dim);
+  text-transform:uppercase;letter-spacing:1.5px;font-weight:700}
+
+/* MAIN CONTENT */
+.main-content{flex:1;min-width:0;overflow-y:auto}
+
+/* RIGHT — Chat sidebar */
+#chatSide{
+  width:300px;flex-shrink:0;background:var(--bg2);
+  border-left:1px solid var(--border);
+  position:sticky;top:45px;height:calc(100vh - 45px);
+  display:flex;flex-direction:column;transition:width .3s;overflow:hidden;
+}
+#chatSide.closed{width:0;border-left:none}
+
+/* Chat toggle button */
+#chatToggle{
+  position:fixed;right:0;top:50%;transform:translateY(-50%);
+  background:linear-gradient(135deg,#6d28d9,#7c3aed);
+  border:none;border-radius:10px 0 0 10px;
+  padding:14px 9px;cursor:pointer;color:#fff;z-index:200;
+  box-shadow:-4px 0 16px rgba(109,40,217,.5);
+  transition:all .3s;display:flex;flex-direction:column;align-items:center;gap:3px;
+}
+#chatToggle:hover{padding-left:14px}
+.ct-ico{font-size:16px}
+.ct-lbl{font-size:8px;font-weight:700;letter-spacing:.5px;writing-mode:vertical-rl}
+
+/* ═══════════════════════════════════════════════
+   SECTION PAGES
+═══════════════════════════════════════════════ */
+.sec-page{display:none;padding:24px 26px 60px;animation:fadeUp .4s ease}
+.sec-page.active{display:block}
+.sec-hdr{
+  display:flex;align-items:center;gap:12px;
+  margin-bottom:22px;padding-bottom:14px;
+  border-bottom:1px solid var(--border);
+}
+.sec-num{
+  width:32px;height:32px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:13px;font-weight:900;flex-shrink:0;
+  border:2px solid;
+}
+.sec-title{font-size:20px;font-weight:800}
+.sec-sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+/* Section nav buttons */
+.sec-nav{
+  display:flex;justify-content:space-between;align-items:center;
+  margin-top:28px;padding-top:18px;border-top:1px solid var(--border);
+}
+.nav-btn{
+  padding:9px 20px;border-radius:9px;border:none;cursor:pointer;
+  font-size:12px;font-weight:700;display:flex;align-items:center;gap:7px;
+  transition:all .2s;font-family:inherit;
+}
+.nav-btn:hover{filter:brightness(1.15);transform:translateY(-1px)}
+.btn-prev{background:var(--bg3);color:var(--text);border:1px solid var(--border)}
+.btn-next{background:linear-gradient(135deg,var(--accent2),var(--accent));color:#fff;
+  box-shadow:0 4px 14px rgba(14,165,233,.4)}
+.sec-of{font-size:11px;color:var(--muted)}
+
+/* ═══════════════════════════════════════════════
+   SECTION 1 — VERDICT
+═══════════════════════════════════════════════ */
+#vcard{
+  border-radius:16px;padding:24px;
+  background:var(--bg2);border-left:5px solid var(--green);
+  display:grid;grid-template-columns:auto 1fr auto;gap:22px;align-items:center;
+  position:relative;overflow:hidden;transition:all .4s;
+  box-shadow:0 8px 40px rgba(0,0,0,.4);margin-bottom:18px;
+}
+#vcard::before{content:'';position:absolute;inset:0;
+  background:radial-gradient(ellipse at top right,var(--vc,transparent),transparent);
+  opacity:.12;pointer-events:none}
+.v-icon{font-size:60px;line-height:1;
+  filter:drop-shadow(0 0 20px var(--vc,transparent));animation:bounce 3s ease infinite}
+.v-label{font-size:26px;font-weight:900;text-transform:uppercase;letter-spacing:1px;transition:color .4s}
+.v-sub{font-size:12px;color:var(--muted);margin-top:6px;line-height:1.8}
+.v-url{font-size:10px;color:var(--dim);margin-top:7px;word-break:break-all;
+  background:var(--bg4);padding:5px 9px;border-radius:5px;
+  font-family:'Courier New',monospace;display:block}
+.v-tags{display:flex;gap:5px;flex-wrap:wrap;margin-top:9px}
+.v-tag{padding:3px 10px;border-radius:20px;font-size:9px;font-weight:800;
+  border:1px solid;animation:popIn .4s ease both}
+/* Gauge */
+.gauge-w{text-align:center;min-width:120px}
+.gauge-w svg{display:block;margin:0 auto;
+  filter:drop-shadow(0 0 10px var(--vc,transparent))}
+.g-bg{fill:none;stroke:var(--bg4);stroke-width:10}
+.g-arc{fill:none;stroke-width:10;stroke-linecap:round;
+  stroke-dasharray:339.3;stroke-dashoffset:339.3;
+  transform-origin:center;transform:rotate(-90deg);
+  transition:stroke-dashoffset 1.8s cubic-bezier(.4,0,.2,1),stroke .4s}
+.g-num{font-size:24px;font-weight:900;line-height:1}
+.g-pct{font-size:9px;color:var(--muted)}
+.g-sev{font-size:10px;font-weight:800;letter-spacing:1px;margin-top:6px}
+
+/* METRICS */
+.metrics{display:grid;grid-template-columns:repeat(4,1fr);gap:11px;margin-bottom:18px}
+@media(max-width:700px){.metrics{grid-template-columns:1fr 1fr}}
+.metric{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:12px;padding:14px;text-align:center;cursor:pointer;
+  position:relative;overflow:hidden;transition:all .25s;
+}
+.metric::after{content:'';position:absolute;bottom:0;left:0;right:0;
+  height:2px;background:var(--mc,var(--accent));opacity:.8}
+.metric:hover{transform:translateY(-3px);border-color:var(--mc,var(--accent))}
+.metric-ico{font-size:20px;margin-bottom:5px}
+.metric-val{font-size:22px;font-weight:900;transition:color .3s}
+.metric-lbl{font-size:9px;color:var(--muted);margin-top:3px;text-transform:uppercase;letter-spacing:.4px}
+
+/* localhost yellow banner */
+#localBanner{
+  display:none;background:linear-gradient(135deg,#78350f,#92400e);
+  border:1px solid var(--yellow);border-radius:14px;padding:16px 18px;
+  margin-bottom:18px;gap:14px;align-items:flex-start;
+}
+#localBanner.show{display:flex}
+.lb-ico{font-size:28px;flex-shrink:0}
+.lb-title{font-weight:800;color:#fbbf24;font-size:15px;margin-bottom:5px}
+.lb-body{font-size:12px;color:#d97706;line-height:1.7}
+.lb-btns{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap}
+.lb-btn{padding:7px 15px;border-radius:8px;border:none;cursor:pointer;
+  font-size:11px;font-weight:700;font-family:inherit;transition:all .2s}
+.lb-proceed{background:#f59e0b;color:#1c1200}
+.lb-dismiss{background:rgba(255,255,255,.1);color:#fbbf24;border:1px solid rgba(255,255,255,.2)}
+.lb-btn:hover{filter:brightness(1.15)}
+
+/* ═══════════════════════════════════════════════
+   SECTION 2 — FEATURE ANALYSIS
+═══════════════════════════════════════════════ */
+.feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px}
+@media(max-width:700px){.feat-grid{grid-template-columns:1fr 1fr}}
+.feat-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:11px;
+  padding:14px;position:relative;overflow:hidden;transition:all .2s;
+  animation:fadeUp .4s ease both;
+}
+.feat-card:hover{transform:translateY(-2px);border-color:var(--fc,var(--border))}
+.feat-card::before{content:'';position:absolute;top:0;left:0;right:0;
+  height:2px;background:var(--fc,var(--border));opacity:.7}
+.feat-lbl{font-size:9px;color:var(--muted);text-transform:uppercase;
+  letter-spacing:.4px;margin-bottom:5px}
+.feat-val{font-size:24px;font-weight:900;color:var(--fc,var(--text));margin-bottom:3px}
+.feat-desc{font-size:10px;color:var(--muted);line-height:1.5}
+.feat-sig{display:inline-flex;align-items:center;gap:3px;padding:2px 7px;
+  border-radius:10px;font-size:8px;font-weight:700;margin-top:5px;border:1px solid}
+
+/* ═══════════════════════════════════════════════
+   SECTION 3 — PROBABILITY
+═══════════════════════════════════════════════ */
+.prob-row{
+  display:flex;align-items:center;gap:12px;margin-bottom:14px;
+  animation:slideIn .4s ease both;
+}
+.prob-lbl{width:160px;font-size:12px;display:flex;align-items:center;gap:7px}
+.prob-track{
+  flex:1;height:13px;background:var(--bg4);border-radius:7px;
+  overflow:hidden;cursor:pointer;transition:height .2s;
+}
+.prob-track:hover{height:17px}
+.prob-fill{height:100%;border-radius:7px;width:0;
+  transition:width 1.5s cubic-bezier(.4,0,.2,1);position:relative}
+.prob-fill::after{content:'';position:absolute;inset:0;
+  background:linear-gradient(90deg,transparent 60%,rgba(255,255,255,.2));border-radius:7px}
+.prob-pct{width:50px;text-align:right;font-size:13px;font-weight:900}
+
+/* ═══════════════════════════════════════════════
+   SECTION 4 — XAI
+═══════════════════════════════════════════════ */
+.xai-explain{
+  background:var(--bg2);border:1px solid var(--gold);border-radius:12px;
+  padding:16px 18px;margin-bottom:18px;
+}
+.xai-explain-title{font-weight:800;color:var(--gold);margin-bottom:8px;font-size:13px}
+.xai-explain-body{font-size:12px;color:#cbd5e1;line-height:1.8}
+.xai-row{
+  display:flex;align-items:center;gap:11px;padding:10px 8px;
+  border-radius:9px;margin:0 -8px;transition:all .2s;
+  border-bottom:1px solid var(--bg4);animation:slideIn .4s ease both;
+}
+.xai-row:hover{background:var(--bg3);transform:translateX(4px)}
+.xai-row:last-child{border-bottom:none}
+.xai-num{width:26px;height:26px;border-radius:50%;display:flex;align-items:center;
+  justify-content:center;font-size:11px;font-weight:900;flex-shrink:0}
+.xai-name{font-size:12px;font-weight:700}
+.xai-desc{font-size:10px;color:var(--muted);margin-top:2px}
+.xai-bar{width:100px;height:7px;background:var(--bg4);border-radius:4px;overflow:hidden;flex-shrink:0}
+.xai-fill{height:100%;border-radius:4px;width:0;transition:width 1.2s ease}
+.xai-val{font-size:12px;font-weight:800;min-width:42px;text-align:right}
+
+/* ═══════════════════════════════════════════════
+   SECTION 5 — CHECKLIST
+═══════════════════════════════════════════════ */
+.chk-row{
+  display:flex;align-items:flex-start;gap:12px;padding:11px 8px;
+  border-radius:9px;margin:0 -8px;transition:background .2s;
+  border-bottom:1px solid var(--bg4);animation:slideIn .4s ease both;
+}
+.chk-row:hover{background:var(--bg3)}.chk-row:last-child{border-bottom:none}
+.chk-ico{width:28px;height:28px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;margin-top:1px}
+.chk-ok{background:#064e3b;border:1px solid #22c55e;color:#22c55e}
+.chk-bad{background:#7f1d1d;border:1px solid #ef4444;color:#ef4444}
+.chk-title{font-size:12px;font-weight:700;margin-bottom:3px}
+.chk-detail{font-size:11px;color:var(--muted);line-height:1.5}
+.good{color:#86efac}.bad{color:#fca5a5}
+
+/* ═══════════════════════════════════════════════
+   SECTION 6 — TIMELINE
+═══════════════════════════════════════════════ */
+.tl-wrap{position:relative;padding-left:14px}
+.tl-wrap::before{content:'';position:absolute;left:9px;top:0;bottom:0;width:2px;
+  background:linear-gradient(to bottom,var(--accent),var(--purple),transparent)}
+.tl-item{display:flex;gap:14px;padding-bottom:22px;animation:slideIn .4s ease both}
+.tl-dot{width:20px;height:20px;border-radius:50%;flex-shrink:0;
+  display:flex;align-items:center;justify-content:center;font-size:9px;
+  font-weight:900;z-index:1;border:2px solid var(--bg);
+  margin-left:-17px;margin-top:2px;
+  box-shadow:0 0 10px var(--dc,transparent)}
+.tl-lbl{font-size:12px;font-weight:700;color:var(--text)}
+.tl-sub{font-size:10px;color:var(--muted);margin-top:3px;line-height:1.5}
+.tl-time{font-size:9px;color:var(--dim);margin-top:3px}
+
+/* ═══════════════════════════════════════════════
+   SECTION 7 — RECOMMENDATIONS
+═══════════════════════════════════════════════ */
+.rec{
+  border-left:4px solid;border-radius:0 11px 11px 0;
+  padding:14px 16px;margin-bottom:10px;background:var(--bg3);
+  transition:transform .2s;animation:slideIn .4s ease both;
+}
+.rec:hover{transform:translateX(5px)}
+.rec-hdr{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.rec-ico{font-size:17px}.rec-title{font-weight:800;font-size:13px}
+.rec-body{font-size:12px;line-height:1.7;color:#9ca3af}
+
+/* ═══════════════════════════════════════════════
+   SECTION 8 — FEATURE TABLE
+═══════════════════════════════════════════════ */
+.tbl-wrap{border-radius:10px;border:1px solid var(--border);
+  overflow:hidden;max-height:400px;overflow-y:auto}
+.tbl-wrap::-webkit-scrollbar{width:5px}
+.tbl-wrap::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.ftbl{width:100%;border-collapse:collapse;font-size:11px}
+.ftbl th{background:var(--bg4);padding:9px 12px;text-align:left;
+  color:var(--muted);font-size:9px;text-transform:uppercase;
+  letter-spacing:.4px;position:sticky;top:0;z-index:1}
+.ftbl td{padding:8px 12px;border-bottom:1px solid var(--bg4);transition:background .15s}
+.ftbl tr:hover td{background:var(--bg3)}
+.ftbl tr:last-child td{border-bottom:none}
+.sb{color:#ef4444;font-weight:800}.sm{color:#f97316;font-weight:600}.so{color:#22c55e}
+.sig-badge{padding:2px 7px;border-radius:8px;font-size:9px;font-weight:700;border:1px solid}
+
+/* ═══════════════════════════════════════════════
+   SECTION 9 — REPORT THIS SITE
+═══════════════════════════════════════════════ */
+.rep-links{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+@media(max-width:600px){.rep-links{grid-template-columns:1fr}}
+.rep-card{
+  background:var(--bg2);border:1px solid var(--border);border-radius:13px;
+  padding:16px;display:block;text-decoration:none;transition:all .25s;
+  position:relative;overflow:hidden;
+}
+.rep-card:hover{transform:translateY(-3px);border-color:var(--rc,var(--border));
+  box-shadow:0 8px 24px rgba(0,0,0,.4)}
+.rep-card::before{content:'';position:absolute;top:0;left:0;right:0;
+  height:3px;background:var(--rc,var(--border));opacity:.8}
+.rep-ico{font-size:28px;margin-bottom:9px}
+.rep-title{font-size:13px;font-weight:800;color:var(--rc,var(--text));margin-bottom:4px}
+.rep-desc{font-size:11px;color:var(--muted);line-height:1.6}
+.rep-link{font-size:9px;color:var(--rc,var(--muted));margin-top:7px;opacity:.7}
+.rep-form{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:14px;padding:20px;
+}
+.rep-form-title{font-size:14px;font-weight:800;margin-bottom:16px;
+  display:flex;align-items:center;gap:8px}
+.rf-group{margin-bottom:13px}
+.rf-label{display:block;font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.5px;color:var(--muted);margin-bottom:5px}
+.rf-input,.rf-select,.rf-textarea{
+  width:100%;background:var(--bg3);border:1px solid var(--border);
+  border-radius:8px;padding:9px 12px;color:var(--text);font-size:12px;
+  outline:none;font-family:inherit;transition:border-color .2s;
+}
+.rf-input:focus,.rf-select:focus,.rf-textarea:focus{border-color:var(--accent)}
+.rf-textarea{resize:vertical;min-height:75px;line-height:1.6}
+.rf-select option{background:var(--bg3)}
+.rf-row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:500px){.rf-row{grid-template-columns:1fr}}
+.rf-submit{
+  width:100%;padding:12px;background:linear-gradient(135deg,#dc2626,#b91c1c);
+  color:#fff;border:none;border-radius:9px;font-size:13px;font-weight:800;
+  cursor:pointer;display:flex;align-items:center;justify-content:center;
+  gap:8px;font-family:inherit;transition:all .2s;margin-top:4px;
+}
+.rf-submit:hover{filter:brightness(1.15);transform:translateY(-2px);
+  box-shadow:0 6px 18px rgba(220,38,38,.4)}
+.rf-success{text-align:center;padding:30px;display:none}
+.rf-success-icon{font-size:48px;margin-bottom:12px;animation:popIn .5s ease}
+.rf-success-title{font-size:17px;font-weight:800;color:var(--green);margin-bottom:8px}
+.rf-success-sub{font-size:12px;color:var(--muted);line-height:1.7}
+.rf-ref{font-size:11px;color:var(--dim);margin-top:8px;font-family:monospace}
+.rf-again{margin-top:14px;padding:8px 18px;background:var(--bg3);
+  color:var(--text);border:1px solid var(--border);border-radius:8px;
+  cursor:pointer;font-size:11px;font-weight:600;font-family:inherit}
+
+/* ═══════════════════════════════════════════════
+   AI CHAT SIDEBAR
+═══════════════════════════════════════════════ */
+.chat-hdr{
+  background:linear-gradient(135deg,#3b0764,#4c1d95,#5b21b6);
+  padding:13px 14px;flex-shrink:0;border-bottom:1px solid #4c1d95;
+}
+.chat-hdr-title{font-size:13px;font-weight:800;color:#e9d5ff;
+  display:flex;align-items:center;gap:7px}
+.chat-hdr-sub{font-size:9px;color:#a78bfa;margin-top:3px}
+.chat-ctx{
+  background:#1a0f2e;padding:7px 12px;font-size:10px;color:#a78bfa;
+  flex-shrink:0;display:flex;align-items:center;gap:6px;
+  border-bottom:1px solid #2d1b69;
+}
+.ctx-dot{width:7px;height:7px;border-radius:50%;flex-shrink:0}
+.chat-msgs{
+  flex:1;overflow-y:auto;padding:10px 9px;
+  display:flex;flex-direction:column;gap:7px;
+}
+.chat-msgs::-webkit-scrollbar{width:4px}
+.chat-msgs::-webkit-scrollbar-thumb{background:var(--border);border-radius:2px}
+.cmsg{display:flex;flex-direction:column;max-width:92%}
+.cmsg.user{align-self:flex-end;align-items:flex-end}
+.cmsg.bot {align-self:flex-start;align-items:flex-start}
+.cmsg-b{
+  padding:8px 11px;border-radius:12px;font-size:11.5px;
+  line-height:1.65;white-space:pre-wrap;word-break:break-word;
+}
+.cmsg.user .cmsg-b{
+  background:linear-gradient(135deg,#1d4ed8,#2563eb);color:#fff;
+  border-radius:12px 12px 3px 12px;
+}
+.cmsg.bot .cmsg-b{
+  background:#0d1526;color:#e2e8f0;
+  border:1px solid #1e3354;border-radius:12px 12px 12px 3px;
+}
+.cmsg-b strong{font-weight:700;color:#a78bfa}
+.cmsg-b code{background:#060d1a;padding:1px 4px;border-radius:3px;
+  font-family:monospace;font-size:10px;color:#60a5fa}
+.cmsg-time{font-size:9px;color:var(--dim);margin-top:2px;padding:0 3px}
+.typing{display:flex;align-items:center;gap:3px;padding:9px 11px;
+  background:#0d1526;border-radius:12px;border:1px solid #1e3354;width:fit-content}
+.typing span{width:6px;height:6px;border-radius:50%;background:#a78bfa;
+  animation:typingDot 1.2s ease infinite}
+.typing span:nth-child(2){animation-delay:.2s}
+.typing span:nth-child(3){animation-delay:.4s}
+.chat-chips{
+  display:flex;flex-wrap:wrap;gap:4px;
+  padding:6px 9px;flex-shrink:0;border-top:1px solid var(--bg4);
+}
+.chip{
+  padding:4px 9px;background:#0d1526;border:1px solid var(--border);
+  border-radius:16px;font-size:10px;color:var(--muted);cursor:pointer;
+  transition:all .2s;font-family:inherit;white-space:nowrap;
+}
+.chip:hover{background:#1a0f2e;border-color:#7c3aed;color:#e9d5ff}
+.chat-input-wrap{
+  padding:8px 9px;border-top:1px solid #1a2235;
+  display:flex;gap:6px;align-items:flex-end;
+  flex-shrink:0;background:var(--bg);
+}
+.chat-input{
+  flex:1;background:#0d1526;border:1px solid var(--border);
+  border-radius:9px;padding:7px 10px;color:var(--text);
+  font-size:11px;outline:none;resize:none;max-height:65px;
+  font-family:inherit;line-height:1.5;
+}
+.chat-input:focus{border-color:#7c3aed}
+.chat-send{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,#6d28d9,#7c3aed);
+  border:none;border-radius:9px;cursor:pointer;color:#fff;
+  font-size:14px;display:flex;align-items:center;justify-content:center;
+  flex-shrink:0;font-weight:900;transition:all .2s;
+}
+.chat-send:hover{filter:brightness(1.2)}
+
+/* ═══════════════════════════════════════════════
+   SCORE MODAL
+═══════════════════════════════════════════════ */
+#modal{
+  position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:999;
+  display:none;align-items:center;justify-content:center;
+  backdrop-filter:blur(5px);
+}
+#modal.show{display:flex}
+.modal-box{
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:18px;padding:28px;max-width:380px;width:90%;
+  animation:popIn .3s ease;box-shadow:0 20px 60px rgba(0,0,0,.7);
+  position:relative;
+}
+.modal-close{
+  position:absolute;top:12px;right:12px;background:var(--bg4);
+  border:none;color:var(--text);width:26px;height:26px;
+  border-radius:50%;cursor:pointer;font-size:13px;
+  display:flex;align-items:center;justify-content:center;transition:all .2s;
+}
+.modal-close:hover{background:var(--red);transform:rotate(90deg)}
+.modal-title{font-size:16px;font-weight:800;margin-bottom:7px}
+.modal-score{font-size:52px;font-weight:900;line-height:1;margin:10px 0}
+.modal-desc{font-size:12px;color:var(--muted);line-height:1.8}
+
+/* Toast */
+#toast{
+  position:fixed;bottom:18px;right:20px;
+  background:var(--bg3);border:1px solid var(--border);
+  color:var(--text);padding:10px 16px;border-radius:10px;
+  font-size:12px;font-weight:700;opacity:0;pointer-events:none;
+  z-index:9999;transition:all .3s;box-shadow:0 6px 20px rgba(0,0,0,.4);
+}
+#toast.show{opacity:1}
+
+/* Shared helpers */
+.card2{background:var(--bg2);border:1px solid var(--border);border-radius:13px;padding:18px;transition:border-color .2s}
+.card2:hover{border-color:#2d4060}
+.ctitle{font-size:10px;font-weight:700;text-transform:uppercase;
+  letter-spacing:.8px;color:var(--muted);margin-bottom:14px;
+  display:flex;align-items:center;gap:6px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:13px;margin-bottom:13px}
+@media(max-width:700px){.g2{grid-template-columns:1fr}}
+.badge-v{display:inline-block;padding:2px 8px;border-radius:20px;font-size:9px;
+  font-weight:700;background:linear-gradient(135deg,var(--accent),var(--purple));
+  color:#fff;margin-left:7px;vertical-align:middle}
+footer{text-align:center;padding:20px;font-size:10px;color:var(--dim);
+  border-top:1px solid var(--bg4);margin-top:20px}
+</style>
+</head>
+<body>
+
+<!-- LOADER -->
+<div id="loader">
+  <div class="lo-icon">🛡️</div>
+  <div class="lo-title">Analyzing Threat Intelligence</div>
+  <div class="lo-bar"><div class="lo-fill" id="loFill"></div></div>
+  <div class="lo-step" id="loStep">Extracting URL features...</div>
+</div>
+
+<!-- BANNER -->
+<div id="banner" class="b-safe"><div class="sl"></div><span id="bannerTxt">🛡️ Scanning...</span></div>
+
+<!-- LAYOUT -->
+<div class="layout">
+
+  <!-- LEFT NAV -->
+  <nav id="sideNav">
+    <div class="nav-header">
+      <div class="nav-title">🛡️ WTI Shield</div>
+      <div class="nav-prog"><div class="nav-prog-fill" id="navFill" style="width:11%"></div></div>
+      <div class="nav-pct" id="navPct">1 of 9 sections</div>
+    </div>
+    <div class="nav-section-lbl">Analysis</div>
+    <div class="nav-item active" id="ni0" data-sec="0"><span class="ni">🎯</span>Verdict & Overview<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni1" data-sec="1"><span class="ni">🔬</span>Feature Analysis<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni2" data-sec="2"><span class="ni">📊</span>Threat Probability<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni3" data-sec="3"><span class="ni">🧠</span>XAI / SHAP Insights<span class="nck">✓</span></div>
+    <div class="nav-section-lbl">Security</div>
+    <div class="nav-item" id="ni4" data-sec="4"><span class="ni">✅</span>Safety Checklist<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni5" data-sec="5"><span class="ni">🕒</span>Detection Timeline<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni6" data-sec="6"><span class="ni">💡</span>Recommendations<span class="nck">✓</span></div>
+    <div class="nav-section-lbl">Data & Action</div>
+    <div class="nav-item" id="ni7" data-sec="7"><span class="ni">📋</span>Feature Table<span class="nck">✓</span></div>
+    <div class="nav-item" id="ni8" data-sec="8"><span class="ni">🚨</span>Report This Site<span class="nck">✓</span></div>
+  </nav>
+
+  <!-- MAIN CONTENT -->
+  <div class="main-content">
+
+    <!-- SEC 0: VERDICT -->
+    <div class="sec-page active" id="sec0">
+      <div class="sec-hdr">
+        <div class="sec-num" id="sn0" style="border-color:var(--accent);color:var(--accent);background:var(--bg3)">1</div>
+        <div><div class="sec-title">Verdict & Overview <span class="badge-v">v9</span></div><div class="sec-sub">Complete threat assessment for the analyzed URL</div></div>
+      </div>
+      <div id="localBanner" class=""><div class="lb-ico">🏠</div><div><div class="lb-title">Local Development Server</div><div class="lb-body" id="lbBody">This URL points to a local development server.</div><div class="lb-btns"><button class="lb-btn lb-proceed" id="lbProceed">Open Site</button><button class="lb-btn lb-dismiss" id="lbDismiss">Dismiss</button></div></div></div>
+      <div id="vcard">
+        <div class="v-icon" id="vi">🛡️</div>
+        <div><div class="v-label" id="vl">Analyzing...</div><div class="v-sub" id="vs"></div><code class="v-url" id="vu"></code><div class="v-tags" id="vtags"></div></div>
+        <div class="gauge-w">
+          <svg width="120" height="120" viewBox="0 0 120 120">
+            <circle class="g-bg" cx="60" cy="60" r="54"/>
+            <circle class="g-arc" id="garc" cx="60" cy="60" r="54" stroke="#22c55e"/>
+          </svg>
+          <div style="text-align:center;margin-top:-10px">
+            <div class="g-num" id="gnum" style="color:#22c55e">0</div>
+            <div class="g-pct">% Risk</div>
+          </div>
+          <div class="g-sev" id="gsev" style="color:#22c55e;text-align:center">LOW</div>
+        </div>
+      </div>
+      <div class="metrics">
+        <div class="metric" style="--mc:#3b82f6" data-modal="conf"><div class="metric-ico">🎯</div><div class="metric-val" id="mconf" style="color:#3b82f6">—</div><div class="metric-lbl">Confidence</div></div>
+        <div class="metric" style="--mc:#f97316" data-modal="risk"><div class="metric-ico">⚠️</div><div class="metric-val" id="mrisk" style="color:#f97316">—</div><div class="metric-lbl">Risk Score</div></div>
+        <div class="metric" style="--mc:#22c55e" data-modal="sev"><div class="metric-ico">⚡</div><div class="metric-val" id="msev" style="color:#22c55e">—</div><div class="metric-lbl">Severity</div></div>
+        <div class="metric" style="--mc:#a855f7" data-modal="eng"><div class="metric-ico">🤖</div><div class="metric-val" id="meng" style="color:#a855f7">—</div><div class="metric-lbl">Engine</div></div>
+      </div>
+      <div id="ruleBadge" style="display:none;background:var(--bg2);border:1px solid var(--gold);border-radius:11px;padding:13px 16px;margin-bottom:14px;display:none;gap:10px;align-items:flex-start">
+        <span style="font-size:20px">⚡</span>
+        <div><div style="font-weight:800;color:var(--gold);font-size:13px;margin-bottom:3px" id="ruleTitle"></div><div style="font-size:12px;color:#d1d5db;line-height:1.7" id="ruleDesc"></div></div>
+      </div>
+      <div class="sec-nav"><div class="sec-of">Section 1 of 9</div><button class="nav-btn btn-next" data-sec="1">Feature Analysis →</button></div>
+    </div>
+
+    <!-- SEC 1: FEATURES -->
+    <div class="sec-page" id="sec1">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:#a855f7;color:#a855f7;background:var(--bg3)">2</div><div><div class="sec-title">Feature Analysis</div><div class="sec-sub">26 URL features extracted and analyzed</div></div></div>
+      <div class="feat-grid" id="featGrid"></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="0">← Verdict</button><div class="sec-of">Section 2 of 9</div><button class="nav-btn btn-next" data-sec="2">Threat Probability →</button></div>
+    </div>
+
+    <!-- SEC 2: PROBABILITY -->
+    <div class="sec-page" id="sec2">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:#3b82f6;color:#3b82f6;background:var(--bg3)">3</div><div><div class="sec-title">Threat Probability Breakdown</div><div class="sec-sub">AI model confidence across all 5 threat classes</div></div></div>
+      <div id="probRows"></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="1">← Features</button><div class="sec-of">Section 3 of 9</div><button class="nav-btn btn-next" data-sec="3">XAI Insights →</button></div>
+    </div>
+
+    <!-- SEC 3: XAI -->
+    <div class="sec-page" id="sec3">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:var(--gold);color:var(--gold);background:var(--bg3)">4</div><div><div class="sec-title">XAI — Explainable AI Insights</div><div class="sec-sub">Why the AI made this decision — SHAP feature importance</div></div></div>
+      <div class="xai-explain"><div class="xai-explain-title">🧠 AI Explanation in Plain English</div><div class="xai-explain-body" id="xaiText">Loading...</div></div>
+      <div class="g2">
+        <div class="card2"><div class="ctitle"><span>📊</span>SHAP Feature Importance</div><div id="xaiRows"></div></div>
+        <div class="card2"><div class="ctitle"><span>💡</span>What SHAP Means</div><div style="font-size:12px;color:var(--muted);line-height:1.8"><strong style="color:var(--gold)">SHAP</strong> (SHapley Additive exPlanations) shows <em>why</em> the AI made its decision.<br><br>Each feature gets an impact score showing how strongly it pushed the prediction toward the detected threat class.<br><br><strong style="color:var(--gold)">Higher bar = stronger influence</strong> on the AI decision.<br><br>We also run <strong style="color:var(--teal)">LIME</strong> as a second independent explanation method for cross-verification.</div></div>
+      </div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="2">← Probability</button><div class="sec-of">Section 4 of 9</div><button class="nav-btn btn-next" data-sec="4">Safety Checklist →</button></div>
+    </div>
+
+    <!-- SEC 4: CHECKLIST -->
+    <div class="sec-page" id="sec4">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:#22c55e;color:#22c55e;background:var(--bg3)">5</div><div><div class="sec-title">Safety Checklist</div><div class="sec-sub" id="chkSub">10 automated security checks</div></div></div>
+      <div id="chkRows"></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="3">← XAI</button><div class="sec-of">Section 5 of 9</div><button class="nav-btn btn-next" data-sec="5">Detection Timeline →</button></div>
+    </div>
+
+    <!-- SEC 5: TIMELINE -->
+    <div class="sec-page" id="sec5">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:var(--teal);color:var(--teal);background:var(--bg3)">6</div><div><div class="sec-title">Detection Timeline</div><div class="sec-sub">Step-by-step trace of how this threat was detected</div></div></div>
+      <div class="tl-wrap"><div id="timeline"></div></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="4">← Checklist</button><div class="sec-of">Section 6 of 9</div><button class="nav-btn btn-next" data-sec="6">Recommendations →</button></div>
+    </div>
+
+    <!-- SEC 6: RECOMMENDATIONS -->
+    <div class="sec-page" id="sec6">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:#ef4444;color:#ef4444;background:var(--bg3)">7</div><div><div class="sec-title">Security Recommendations</div><div class="sec-sub">Actions to take based on this threat analysis</div></div></div>
+      <div id="recs"></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="5">← Timeline</button><div class="sec-of">Section 7 of 9</div><button class="nav-btn btn-next" data-sec="7">Feature Table →</button></div>
+    </div>
+
+    <!-- SEC 7: TABLE -->
+    <div class="sec-page" id="sec7">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:var(--accent2);color:var(--accent2);background:var(--bg3)">8</div><div><div class="sec-title">URL Feature Table</div><div class="sec-sub">All 26 extracted features with values and signal levels</div></div></div>
+      <div class="tbl-wrap"><table class="ftbl"><thead><tr><th>Feature</th><th>Value</th><th>Signal</th><th>Description</th></tr></thead><tbody id="ftbody"></tbody></table></div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="6">← Recommendations</button><div class="sec-of">Section 8 of 9</div><button class="nav-btn btn-next" data-sec="8" style="background:linear-gradient(135deg,#dc2626,#b91c1c)">🚨 Report This Site →</button></div>
+    </div>
+
+    <!-- SEC 8: REPORT -->
+    <div class="sec-page" id="sec8">
+      <div class="sec-hdr"><div class="sec-num" style="border-color:#ef4444;color:#ef4444;background:var(--bg3)">9</div><div><div class="sec-title">Report This Site</div><div class="sec-sub">Submit this threat to cybersecurity authorities</div></div></div>
+      <div class="rep-links">
+        <a class="rep-card" style="--rc:#ef4444" href="https://safebrowsing.google.com/safebrowsing/report_phish/" target="_blank"><div class="rep-ico">🔍</div><div class="rep-title">Google Safe Browsing</div><div class="rep-desc">Report phishing & malware to Google. Protects Chrome, Firefox, Safari users.</div><div class="rep-link">safebrowsing.google.com →</div></a>
+        <a class="rep-card" style="--rc:#f97316" href="https://www.microsoft.com/en-us/wdsi/support/report-unsafe-site" target="_blank"><div class="rep-ico">🪟</div><div class="rep-title">Microsoft SmartScreen</div><div class="rep-desc">Report unsafe websites to Microsoft Edge & Defender users worldwide.</div><div class="rep-link">microsoft.com/wdsi →</div></a>
+        <a class="rep-card" style="--rc:#3b82f6" href="https://www.ic3.gov/" target="_blank"><div class="rep-ico">🏛️</div><div class="rep-title">FBI Internet Crime (IC3)</div><div class="rep-desc">Report cybercrime including SQL injection, phishing, and web fraud.</div><div class="rep-link">ic3.gov →</div></a>
+        <a class="rep-card" style="--rc:#a855f7" href="https://www.phishtank.com/add_web_phish.php" target="_blank"><div class="rep-ico">🎣</div><div class="rep-title">PhishTank Community</div><div class="rep-desc">Submit phishing URLs to the global community database.</div><div class="rep-link">phishtank.com →</div></a>
+      </div>
+      <div class="rep-form">
+        <div class="rep-form-title">📝 Internal Threat Report</div>
+        <div id="rfForm">
+          <div class="rf-row">
+            <div class="rf-group"><label class="rf-label">Reported URL</label><input class="rf-input" id="rfUrl" readonly></div>
+            <div class="rf-group"><label class="rf-label">Threat Type</label><input class="rf-input" id="rfThreat" readonly></div>
+          </div>
+          <div class="rf-row">
+            <div class="rf-group"><label class="rf-label">Risk Score</label><input class="rf-input" id="rfRisk" readonly></div>
+            <div class="rf-group"><label class="rf-label">Severity</label><input class="rf-input" id="rfSev" readonly></div>
+          </div>
+          <div class="rf-group"><label class="rf-label">Your Name / Student ID</label><input class="rf-input" id="rfName" placeholder="e.g. Security Analyst"></div>
+          <div class="rf-group">
+            <label class="rf-label">Incident Category</label>
+            <select class="rf-select" id="rfCat">
+              <option value="">Select category...</option>
+              <option>SQL Injection Attack</option><option>XSS Injection</option>
+              <option>Web Threat / Phishing</option><option>DDoS Attack</option>
+              <option>Suspicious URL</option><option>False Positive</option>
+            </select>
+          </div>
+          <div class="rf-group"><label class="rf-label">Additional Details</label><textarea class="rf-textarea" id="rfDetails" placeholder="Describe how you encountered this URL..."></textarea></div>
+          <button class="rf-submit" id="rfSubmitBtn">🚨 Submit Threat Report</button>
+        </div>
+        <div class="rf-success" id="rfSuccess">
+          <div class="rf-success-icon">✅</div>
+          <div class="rf-success-title">Report Submitted!</div>
+          <div class="rf-success-sub">Thank you. Your report has been logged and will improve threat intelligence.</div>
+          <div class="rf-ref" id="rfRef"></div>
+          <button class="rf-again" id="rfAgainBtn">Submit Another</button>
+        </div>
+      </div>
+      <div class="sec-nav"><button class="nav-btn btn-prev" data-sec="7">← Feature Table</button><div class="sec-of">Section 9 of 9 — Complete ✅</div><button class="nav-btn btn-next" data-sec="0">↑ Back to Top</button></div>
+      <footer>🛡️ WTI Shield v9.0 · Dynamic Web Threat Intelligence & Real-Time Attack Prevention Using Explainable AI · Final Year Project</footer>
+    </div>
+
+  </div><!-- /main-content -->
+
+  <!-- RIGHT: AI CHAT -->
+  <div id="chatSide">
+    <div class="chat-hdr">
+      <div class="chat-hdr-title">🤖 AI Security Assistant</div>
+      <div class="chat-hdr-sub" id="chatMode">Checking connection...</div>
+    </div>
+    <div class="chat-ctx" id="chatCtx">
+      <div class="ctx-dot" id="ctxDot" style="background:#22c55e"></div>
+      <span id="ctxTxt">Loading...</span>
+    </div>
+    <div class="chat-msgs" id="chatMsgs"></div>
+    <div class="chat-chips" id="chatChips"></div>
+    <div class="chat-input-wrap">
+      <textarea class="chat-input" id="chatIn" placeholder="Ask about this threat..." rows="1"></textarea>
+      <button class="chat-send" id="chatSend">➤</button>
+    </div>
+  </div>
+
+</div><!-- /layout -->
+
+<!-- Chat toggle -->
+<button id="chatToggle" id="chatToggle">
+  <span class="ct-ico">🤖</span>
+  <span class="ct-lbl">AI</span>
+</button>
+
+<!-- Score Modal -->
+<div id="modal"><div class="modal-box">
+  <button class="modal-close" id="modalClose">✕</button>
+  <div class="modal-title" id="mTitle"></div>
+  <div class="modal-score" id="mScore"></div>
+  <div class="modal-desc"  id="mDesc"></div>
+</div></div>
+
+<div id="toast"></div>
+
+<script src="../assistant/assistant.js"></script>
+<script src="report.js"></script>
+</body>
+</html>

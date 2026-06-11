@@ -1,0 +1,19 @@
+{
+  "manifest_version": 3,
+  "name": "WTI Shield — Web Threat Intelligence",
+  "version": "9.0.0",
+  "description": "Real-time AI threat detection · SHAP/LIME XAI · Security Assistant · SQL/XSS/Phishing/DDoS",
+  "permissions": ["activeTab", "tabs", "storage", "notifications"],
+  "host_permissions": ["<all_urls>", "http://localhost:5000/*"],
+  "background": { "service_worker": "background/background.js" },
+  "action": {
+    "default_popup": "popup/popup.html",
+    "default_icon": {"16":"icons/icon16.png","48":"icons/icon48.png","128":"icons/icon128.png"},
+    "default_title": "WTI Shield"
+  },
+  "web_accessible_resources": [{
+    "resources": ["report/report.html","report/report.js","popup/popup.js","assistant/assistant.js","localhost/localhost.html","localhost/localhost.js","warning/warning.html","warning/warning.js"],
+    "matches": ["<all_urls>"]
+  }],
+  "icons": {"16":"icons/icon16.png","48":"icons/icon48.png","128":"icons/icon128.png"}
+}

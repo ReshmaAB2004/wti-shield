@@ -1,0 +1,69 @@
+{
+  "model_version": "3.0.0",
+  "threat_classes": [
+    "benign",
+    "sql_injection",
+    "xss",
+    "phishing",
+    "ddos"
+  ],
+  "feature_columns": [
+    "url_length",
+    "num_special_chars",
+    "has_ip",
+    "num_subdomains",
+    "has_https",
+    "entropy",
+    "num_digits",
+    "num_params",
+    "payload_length",
+    "num_encoded_chars",
+    "num_sql_keywords",
+    "num_script_tags",
+    "num_event_handlers",
+    "brand_keyword_count",
+    "has_brand_in_domain",
+    "has_suspicious_tld",
+    "num_hyphens_domain",
+    "domain_length",
+    "has_at_symbol",
+    "has_double_slash",
+    "num_dots",
+    "req_per_second",
+    "avg_payload_size",
+    "unique_ips",
+    "error_rate",
+    "req_size_variance",
+    "sql_payload_ratio",
+    "xss_density",
+    "encoded_ratio",
+    "traffic_anomaly_score",
+    "url_complexity",
+    "phishing_score"
+  ],
+  "label_map": {
+    "benign": 0,
+    "sql_injection": 1,
+    "xss": 2,
+    "phishing": 3,
+    "ddos": 4
+  },
+  "performance": {
+    "RandomForest": {
+      "accuracy": 0.9843971631205674,
+      "f1": 0.984700905852984,
+      "roc_auc": 0.9994587157440432
+    },
+    "GradientBoosting": {
+      "accuracy": 0.9964539007092199,
+      "f1": 0.9963887095952125,
+      "roc_auc": 0.9998866415732381
+    },
+    "LogisticRegression": {
+      "accuracy": 0.9666666666666667,
+      "f1": 0.9688737935879519,
+      "roc_auc": 0.9967410930061448
+    }
+  },
+  "best_model": "GradientBoosting"
+}
