@@ -112,7 +112,7 @@ document.getElementById("checkRows").innerHTML = checks.map(function(c) {
 }).join("");
 
 // ── GEMINI AI ASSISTANT ──────────────────────────────────────────
-const GEMINI_API_KEY = "AQ.Ab8RN6IF7bFHeCsYvp0EYibGEcLvC4dg4RSH3bmubeK1OgpsPA"; // Replace with your key
+const GEMINI_API_KEY = "AIzaSyCu6BdI1XTcuspa56SFMgEyRERfUpsMPCE"; // Replace with your key
 
 const GEMINI_CONTEXT =
   "You are the AI Security Assistant for WTI Shield, a Chrome extension (final-year AI project). " +
