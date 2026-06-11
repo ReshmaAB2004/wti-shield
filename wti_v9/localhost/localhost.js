@@ -51,7 +51,7 @@ function navigateAndClose(targetUrl) {
 //  https://aistudio.google.com/apikey  (free account)
 // ═══════════════════════════════════════════════════════════════
 
-const GEMINI_API_KEY = "AQ.Ab8RN6IF7bFHeCsYvp0EYibGEcLvC4dg4RSH3bmubeK1OgpsPA";
+const GEMINI_API_KEY = "AIzaSyCu6BdI1XTcuspa56SFMgEyRERfUpsMPCE";
 
 const GEMINI_SYSTEM =
   "You are WTI Shield's AI Security Assistant inside a Chrome extension for a " +
