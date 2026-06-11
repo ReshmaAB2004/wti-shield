@@ -106,7 +106,7 @@ const WTI_ASSISTANT = (() => {
 
   // ── Online response via Gemini API ────────────────────────────
   // Get your free API key at: https://aistudio.google.com/apikey
-  const GEMINI_API_KEY = "AQ.Ab8RN6IF7bFHeCsYvp0EYibGEcLvC4dg4RSH3bmubeK1OgpsPA";
+  const GEMINI_API_KEY = "AIzaSyCu6BdI1XTcuspa56SFMgEyRERfUpsMPCE";
 
   async function onlineRespond(userMsg){
     const tc   = CTX.tc || "benign";
